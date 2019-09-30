@@ -1,0 +1,30 @@
+不管是 R-CNN 還是 Fast R-CNN 都還是要先透過 selective search 預選 region proposals，這是一個緩慢的步驟。Faster R-CNN 的想法也很直覺，與其預先篩選 region proposals，到不如從 CNN 的 feature map 上選出 region proposals。
+RPN (Region Proposal Network) 也是一個 Convolution Network，Input 是之前 CNN 輸出的 feature map，輸出是一個 bounding box 以及該 bounding box 包含一個物體的機率。
+
+
+RPN網絡做的事情就是，Input 是之前 CNN 輸出的 feature map，輸出是一個 bounding box 以及該 bounding box 包含一個物體的機率。如果一個Region的，則認為這個Region中可能是80個類別中的某一類，具體是哪一類現在還不清楚。
+
+
+RoIPooling 在做 Max pooling 時，會使用最近插值法取得數值，所以出來的遮罩會有偏移現象，而且pooling下來的結又會讓region的尺寸出現浮點數
+所以 Mask R-CNN 改採用雙線性插值法來改善 RoIPooling，稱之為 RoIAlign
+
+
+
+
+
+ROI Pooling 的作用是根據預選框的位置坐標在特徵圖中將相應區域池化為固定尺寸的特徵圖，分類和包圍框回歸操作。由於預選框的位置通常是由模型回歸得到的，一般來講是浮點數，而池化後的特徵圖要求尺寸固定。
+
+
+
+
+
+
+
+
+
+RPN 在 feature map 上取 sliding window，每個 sliding window 的中心點稱之為 anchor point，然後將事先準備好的 k 個不同尺寸比例的 box 以同一個 anchor point 去計算可能包含物體的機率(score)，取機率最高的 box。這 k 個 box 稱之為 anchor box。所以每個 anchor point 會得到 2k 個 score，以及 4k 個座標位置 (box 的左上座標，以及長寬，所以是 4 個數值)。在 Faster R-CNN 論文裡，預設是取 3 種不同大小搭配 3 種不同長寬比的 anchor box，所以 k 為 3x3 = 9 。
+
+經由 RPN 之後，我們便可以得到一些最有可能的 bounding box，雖然這些 bounding box 不見得精確，但是透過類似於 Fast RCNN 的 RoIPooling， 一樣可以很快的對每個 region 分類，並找到最精確的 bounding box 座標。
+
+Mask R-CNN 是建構於 Faster R-CNN 之上，如果是透過 RoIPooling 取得 Region proposals 之後，針對每個 region 會再跑 FCN 取得遮罩分割，但是由於 RoIPooling 在做 Max pooling 時，會使用最近插值法(Nearest Neighbor Interpolation)取得數值，所以出來的遮罩會有偏移現象，再加上 pooling 下來的結果，會讓 region 的尺寸出現非整數的情況，然後取整數的結果就是沒辦法做到 Pixel 層級的遮罩。所以 Mask R-CNN 改採用雙線性插值法(Bilinear Interpolation)來改善 RoIPooling，稱之為 RoIAlign，RoIAlign 會讓遮罩位置更準確。
+
